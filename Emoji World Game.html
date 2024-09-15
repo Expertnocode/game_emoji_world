@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji World Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
+    <style>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #root {
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid black;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 60%;
+            max-height: 80%;
+            overflow-y: auto;
+            position: relative;
+        }
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .map-cell {
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .map-emoji {
+            font-size: 36px;
+        }
+        .map-name {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const zones = [
+            { emoji: "🌳", color: "#228B22", name: "la forêt", landmarks: ["🌲", "🍄", "⛲"] },
+            { emoji: "🏙️", color: "#808080", name: "la ville", landmarks: ["🏢", "🚦", "🚗"] },
+            { emoji: "🏔️", color: "#FFFFFF", name: "les montagnes", landmarks: ["⛰️", "🏔️", "🗻"] },
+            { emoji: "🌊", color: "#0000FF", name: "l'océan", landmarks: ["🐠", "🏖️", "🐚"] },
+            { emoji: "🏭", color: "#696969", name: "la zone industrielle", landmarks: ["🏭", "🔧", "🚛"] },
+            { emoji: "🏜️", color: "#FFD700", name: "le désert", landmarks: ["🌵", "🐪", "🏜️"] },
+            { emoji: "🌾", color: "#DAA520", name: "les champs", landmarks: ["🌾", "🚜", "🐄"] },
+            { emoji: "🏫", color: "#9ACD32", name: "le campus universitaire", landmarks: ["🏫", "📚", "🔬"] },
+            { emoji: "🌋", color: "#8B4513", name: "la zone volcanique", landmarks: ["🌋", "🔥", "🧱"] }
+        ];
+
+        const zoneHints = {
+            "🌳": [
+                "Cherchez la zone où les arbres poussent en abondance",
+                "Votre objectif se cache parmi les feuillages",
+                "Dirigez-vous vers l'endroit où l'air est rempli du chant des oiseaux",
+                "La réponse se trouve là où la canopée bloque le soleil",
+                "Explorez la région où la nature règne en maître",
+                "Votre destin vous attend dans le royaume vert",
+                "Suivez le chemin bordé de mousse et de fougères",
+                "La clé de l'énigme se cache dans l'ombre des grands chênes",
+                "Cherchez là où les écureuils font leurs provisions",
+                "Votre quête vous mène au cœur de la forêt primaire"
+            ],
+            "🏙️": [
+                "Dirigez-vous vers l'endroit où les bâtiments touchent le ciel",
+                "Votre quête vous mène au cœur de la jungle urbaine",
+                "Cherchez parmi les rues animées et les gratte-ciels",
+                "La réponse se cache dans le labyrinthe de béton et d'acier",
+                "Explorez là où les lumières de la ville ne s'éteignent jamais",
+                "Votre objectif se trouve au carrefour de la modernité",
+                "Suivez le rythme effréné de la vie citadine",
+                "La clé de l'énigme est cachée dans l'ombre des tours vertigineuses",
+                "Cherchez là où le métro tisse sa toile souterraine",
+                "Votre destin vous attend dans le quartier des affaires"
+            ],
+            "🏔️": [
+                "Allez vers les sommets enneigés",
+                "Votre objectif se trouve là où l'air se raréfie",
+                "Cherchez dans les hauteurs majestueuses",
+                "La réponse vous attend au-dessus des nuages",
+                "Explorez le royaume des aigles",
+                "Votre destin est lié aux pics rocheux",
+                "Suivez le sentier qui serpente vers les cimes",
+                "La clé de l'énigme se cache dans les crevasses glaciaires",
+                "Cherchez là où les avalanches grondent au loin",
+                "Votre quête vous mène au toit du monde"
+            ],
+            "🌊": [
+                "Plongez dans l'aventure marine",
+                "Votre destin est lié aux courants de l'océan",
+                "Explorez le royaume des créatures aquatiques",
+                "La réponse se cache parmi les récifs colorés",
+                "Suivez le chemin des dauphins joueurs",
+                "Votre quête vous emmène vers les trésors engloutis",
+                "Cherchez là où les algues dansent au rythme des marées",
+                "La clé de l'énigme flotte dans les profondeurs azurées",
+                "Explorez l'endroit où les vagues murmurent des secrets",
+                "Votre objectif se trouve là où l'horizon rencontre l'eau"
+            ],
+            "🏭": [
+                "Cherchez la zone où les machines ne dorment jamais",
+                "Votre objectif se trouve parmi les cheminées fumantes",
+                "La réponse est cachée dans le vrombissement des moteurs",
+                "Explorez le cœur battant de l'industrie",
+                "Votre mission vous mène aux entrailles de la production",
+                "Suivez le chemin des tapis roulants",
+                "La clé de l'énigme repose sur une chaîne de montage",
+                "Cherchez là où l'acier se plie à la volonté de l'homme",
+                "Votre quête vous emmène dans les coulisses de la technologie",
+                "Dirigez-vous vers l'endroit où les idées deviennent réalité"
+            ],
+            "🏜️": [
+                "Votre destination est là où le sable s'étend à perte de vue",
+                "Cherchez dans l'immensité dorée",
+                "La mission vous attend là où le soleil règne en maître",
+                "Explorez le royaume de la chaleur et du silence",
+                "Votre objectif se cache parmi les dunes mouvantes",
+                "Suivez les traces des caravanes anciennes",
+                "La clé de l'énigme repose dans l'ombre d'un oasis",
+                "Cherchez là où les mirages dansent à l'horizon",
+                "Votre destin est écrit dans les étoiles du désert",
+                "Dirigez-vous vers l'endroit où le vent sculpte le paysage"
+            ],
+            "🌾": [
+                "Cherchez l'endroit où les céréales ondulent au vent",
+                "Votre objectif se trouve parmi les épis dorés",
+                "La réponse se cache dans le labyrinthe des champs",
+                "Explorez le grenier du monde",
+                "Votre mission vous mène au cœur de la terre nourricière",
+                "Suivez le chemin tracé par les tracteurs",
+                "La clé de l'énigme est enfouie dans le sol fertile",
+                "Cherchez là où les épouvantails montent la garde",
+                "Votre quête vous emmène vers les vastes prairies",
+                "Dirigez-vous vers l'endroit où la nature et l'homme collaborent"
+            ],
+            "🏫": [
+                "Votre destination est le lieu du savoir et de la découverte",
+                "Cherchez parmi les salles de classe et les laboratoires",
+                "La réponse se cache dans les pages des livres anciens",
+                "Explorez le berceau des futures générations",
+                "Votre objectif se trouve là où les esprits s'éveillent",
+                "Suivez le chemin tracé par les étudiants ambitieux",
+                "La clé de l'énigme est inscrite sur un tableau noir",
+                "Cherchez dans la bibliothèque aux étagères infinies",
+                "Votre destin vous attend dans l'amphithéâtre du savoir",
+                "Dirigez-vous vers l'endroit où les idées changent le monde"
+            ],
+            "🌋": [
+                "Cherchez l'endroit où la terre crache du feu",
+                "Votre objectif se trouve au bord du cratère fumant",
+                "La réponse bouillonne dans les profondeurs de la terre",
+                "Explorez le domaine de Vulcain",
+                "Votre mission vous mène au cœur de la puissance tellurique",
+                "Suivez le chemin tracé par les coulées de lave",
+                "La clé de l'énigme repose sur un champ de cendres",
+                "Cherchez là où les geysers jaillissent vers le ciel",
+                "Votre quête vous emmène vers les forges de la planète",
+                "Dirigez-vous vers l'endroit où la croûte terrestre s'ouvre"
+            ]
+        };
+
+        const landmarkHints = {
+            "🌲": [
+                "Cherchez près de l'endroit où on peut construire des cabanes",
+                "Votre objectif est caché parmi les conifères",
+                "Regardez autour des arbres les plus hauts",
+                "La réponse se trouve près de l'ombre des grands pins",
+                "Explorez là où l'air est parfumé de résine",
+                "Votre destin vous attend sous la canopée verte",
+                "Cherchez près des arbres qui restent verts toute l'année",
+                "La clé se cache où les pommes de pin jonchent le sol",
+                "Explorez autour des sentiers bordés d'épicéas",
+                "Votre quête vous mène près des géants à l'écorce rugueuse"
+            ],
+            "🍄": [
+                "Il y a quelque chose d'intéressant près des champignons comestibles",
+                "Cherchez dans la zone où poussent les champignons colorés",
+                "Votre mission vous attend près du cercle de champignons",
+                "La clé se cache parmi les spores et les mycéliums",
+                "Explorez l'endroit où la forêt révèle ses secrets souterrains",
+                "Votre objectif se trouve là où les fées dansent la nuit",
+                "Cherchez près des champignons qui brillent dans l'obscurité",
+                "La réponse pousse là où l'humidité nourrit la vie",
+                "Explorez autour des champignons géants aux formes étranges",
+                "Votre destin est lié au royaume silencieux des décomposeurs"
+            ],
+            "⛲": [
+                "Trouvez l'endroit où l'eau jaillit du sol",
+                "Votre objectif est près de la source d'eau cristalline",
+                "Cherchez là où l'eau chante une mélodie éternelle",
+                "La réponse se cache près des jets d'eau dansants",
+                "Explorez autour du point de rencontre favori du parc",
+                "Votre destin vous attend près du murmure de l'eau",
+                "Cherchez là où les pièces scintillent sous la surface",
+                "La clé se trouve près de la sculpture aquatique centrale",
+                "Explorez autour du lieu où les amoureux font des vœux",
+                "Votre quête vous mène vers l'oasis urbaine rafraîchissante"
+            ],
+            "🏢": [
+                "Votre objectif est près des gratte-ciels",
+                "Cherchez dans l'ombre des tours de verre et d'acier",
+                "La réponse se trouve au cœur du quartier des affaires",
+                "Explorez là où les ascenseurs montent vers le ciel",
+                "Votre destin vous attend dans le labyrinthe des bureaux",
+                "Regardez près des façades qui reflètent les nuages",
+                "La clé se cache dans le hall d'un immeuble imposant",
+                "Cherchez près des antennes qui couronnent les buildings",
+                "Explorez la zone où les cols blancs s'affairent",
+                "Votre quête vous mène vers les sommets de la ville"
+            ],
+            "🚦": [
+                "Cherchez près des feux de circulation",
+                "Votre objectif se trouve à un carrefour animé",
+                "La réponse clignote en rouge, jaune et vert",
+                "Explorez l'endroit où le trafic pulse comme un cœur urbain",
+                "Votre destin vous attend au rythme des changements de feux",
+                "Regardez près des passages piétons zébrés",
+                "La clé se cache là où les voitures s'arrêtent et repartent",
+                "Cherchez à l'intersection des flux de la ville",
+                "Explorez la zone où les piétons et les véhicules se côtoient",
+                "Votre quête vous mène vers le point névralgique de la circulation"
+            ],
+            "🚗": [
+                "L'objectif est près d'un parking",
+                "Cherchez dans la zone où les voitures se reposent",
+                "La réponse se trouve parmi les lignes blanches au sol",
+                "Explorez l'endroit où les conducteurs laissent leurs véhicules",
+                "Votre destin vous attend près des bornes de paiement",
+                "Regardez autour des places réservées aux handicapés",
+                "La clé se cache près des rampes d'accès au parking",
+                "Cherchez près des panneaux indiquant les niveaux",
+                "Explorez la zone où les voitures électriques se rechargent",
+                "Votre quête vous mène vers le hub de stationnement urbain"
+            ],
+            "⛰️": [
+                "Votre objectif est au pied d'une montagne",
+                "Cherchez près des sentiers de randonnée escarpés",
+                "La réponse se trouve là où la terre s'élève vers le ciel",
+                "Explorez l'endroit où les alpinistes commencent leur ascension",
+                "Votre destin vous attend dans l'ombre de la montagne majestueuse",
+                "Regardez près des rochers couverts de lichen",
+                "La clé se cache dans une grotte au pied de la montagne",
+                "Cherchez là où les ruisseaux de montagne prennent leur source",
+                "Explorez la zone où la faune alpine trouve refuge",
+                "Votre quête vous mène vers le gardien de pierre des hauteurs"
+            ],
+            "🏔️": [
+                "Cherchez près des sommets enneigés",
+                "Votre objectif se trouve là où l'air se raréfie",
+                "La réponse est cachée dans les nuages qui embrassent les pics",
+                "Explorez l'endroit où les aigles font leur nid",
+                "Votre destin vous attend sur les pentes immaculées",
+                "Regardez près des crevasses glaciaires profondes",
+                "La clé se cache dans un refuge de haute montagne",
+                "Cherchez là où les avalanches ont façonné le paysage",
+                "Explorez la zone où les alpinistes plantent leurs drapeaux",
+                "Votre quête vous mène vers le toit du monde"
+            ],
+            "🗻": [
+                "Votre objectif est près du volcan endormi",
+                "Cherchez dans les environs du cône parfait",
+                "La réponse se trouve là où la terre rencontre le feu",
+                "Explorez les pentes couvertes de cendres anciennes",
+                "Votre destin vous attend près du cratère silencieux",
+                "Regardez autour des sources chaudes fumantes",
+                "La clé se cache dans les roches volcaniques poreuses",
+                "Cherchez près des coulées de lave solidifiées",
+                "Explorez la zone où la végétation reprend ses droits",
+                "Votre quête vous guide vers le géant assoupi de la terre"
+            ],
+            "🐠": [
+                "Plongez près des récifs colorés",
+                "Votre objectif nage parmi les coraux",
+                "La réponse se cache dans les eaux cristallines",
+                "Explorez les grottes sous-marines secrètes",
+                "Votre destin vous attend dans le royaume des poissons tropicaux",
+                "Cherchez près des anémones dansantes",
+                "La clé se trouve dans le jardin sous-marin",
+                "Nagez vers l'endroit où les poissons-clowns jouent",
+                "Explorez la zone où les raies glissent gracieusement",
+                "Votre quête vous emmène vers la symphonie silencieuse des profondeurs"
+            ],
+            "🏖️": [
+                "Cherchez là où le sable rencontre l'eau",
+                "Votre objectif est caché parmi les parasols colorés",
+                "Regardez près des châteaux de sable éphémères",
+                "La réponse flotte sur les vagues douces du rivage",
+                "Explorez l'endroit où les vacanciers se prélassent au soleil",
+                "Votre destin vous attend près des dunes de sable chaud",
+                "Cherchez là où les enfants collectionnent des coquillages",
+                "La clé se trouve près des filets de volleyball de plage",
+                "Explorez la zone où les palmiers offrent une ombre rafraîchissante",
+                "Votre quête vous mène vers le paradis des baigneurs"
+            ],
+            "🐚": [
+                "Explorez l'endroit où on peut collecter des trésors de la mer",
+                "Votre objectif se cache parmi les coquillages nacrés",
+                "Cherchez près du rivage après la marée basse",
+                "La réponse est enfouie dans le sable humide",
+                "Regardez là où les bernard-l'hermite cherchent une nouvelle maison",
+                "Votre destin est lié aux spirales naturelles des coquilles",
+                "Explorez la zone où l'océan dépose ses plus beaux ornements",
+                "La clé se trouve parmi les formes et couleurs variées des coquillages",
+                "Cherchez près des rochers couverts de moules et de patelles",
+                "Votre quête vous mène vers un musée naturel marin"
+            ],
+            "🏭": [
+                "Votre objectif est près des cheminées industrielles",
+                "Cherchez autour des entrepôts massifs",
+                "La réponse se trouve dans la zone de production",
+                "Explorez l'endroit où les machines bourdonnent sans cesse",
+                "Votre destin vous attend près des cuves de traitement",
+                "Regardez autour des convoyeurs en mouvement perpétuel",
+                "La clé se cache dans la salle de contrôle centrale",
+                "Cherchez près des silos de stockage imposants",
+                "Explorez la zone où les camions chargent et déchargent",
+                "Votre quête vous guide vers le cœur de la production industrielle"
+            ],
+            "🔧": [
+                "Votre objectif est près de l'atelier de réparation",
+                "Cherchez autour des établis couverts d'outils",
+                "La réponse se trouve parmi les pièces mécaniques éparpillées",
+                "Explorez l'endroit où les moteurs reprennent vie",
+                "Votre destin vous attend près des ponts élévateurs",
+                "Regardez autour des manuels techniques ouverts",
+                "La clé se cache dans la boîte à outils du maître mécanicien",
+                "Cherchez près des voitures en cours de restauration",
+                "Explorez la zone où l'odeur d'huile et de métal règne",
+                "Votre quête vous mène vers le cœur battant de la mécanique"
+            ],
+            "🚛": [
+                "L'objectif est près du dépôt de camions",
+                "Cherchez dans le parking des poids lourds",
+                "La réponse se trouve là où les routiers font une pause",
+                "Explorez l'endroit où les marchandises sont chargées et déchargées",
+                "Votre destin vous attend près des pompes à carburant pour camions",
+                "Regardez autour des énormes remorques alignées",
+                "La clé se cache dans la cabine d'un camion long-courrier",
+                "Cherchez près du panneau d'affichage des itinéraires",
+                "Explorez la zone où les mécaniciens entretiennent les mastodontes",
+                "Votre quête vous guide vers les géants de la route"
+            ],
+            "🌵": [
+                "L'objectif est près d'un cactus géant",
+                "Cherchez dans l'ombre rare du désert",
+                "La réponse se trouve parmi les épines protectrices",
+                "Explorez l'endroit où la vie défie l'aridité",
+                "Votre destin vous attend près de l'oasis naturelle",
+                "Regardez autour des fleurs de cactus éphémères",
+                "La clé se cache dans les bras étendus du saguaro",
+                "Cherchez là où les oiseaux du désert font leur nid",
+                "Explorez la zone où le vert contraste avec le sable",
+                "Votre quête vous mène vers le gardien épineux du désert"
+            ],
+            "🐪": [
+                "Cherchez près de l'oasis où les chameaux se reposent",
+                "Votre objectif se trouve le long des anciennes routes caravanières",
+                "La réponse est cachée près des dunes où les dromadaires laissent leurs empreintes",
+                "Explorez l'endroit où les nomades font une halte",
+                "Votre destin vous attend près des abreuvoirs du désert",
+                "Regardez autour des palmiers qui offrent de l'ombre",
+                "La clé se cache près des selles ornées des chameaux",
+                "Cherchez dans la zone où les 'navires du désert' se rassemblent",
+                "Explorez près des tentes des chameliers",
+                "Votre quête vous guide vers les maîtres de l'adaptation désertique"
+            ],
+            "🏜️": [
+                "Votre objectif est caché dans les dunes dorées",
+                "Cherchez là où le mirage danse à l'horizon",
+                "La réponse se trouve dans le silence du désert profond",
+                "Explorez les formations rocheuses sculptées par le vent",
+                "Votre destin vous attend dans la vallée des sables mouvants",
+                "Regardez autour des rares touffes de végétation résistante",
+                "La clé se cache sous un ancien morceau de poterie brisée",
+                "Cherchez près des traces d'animaux du désert",
+                "Explorez la zone où les dunes chantent au vent",
+                "Votre quête vous emmène au cœur du désert inexploré"
+            ],
+            "🌾": [
+                "Votre objectif est caché dans les hautes herbes",
+                "Cherchez près des épis dorés ondulant au vent",
+                "La réponse se trouve au milieu d'un champ de blé",
+                "Explorez l'endroit où les tracteurs ont laissé leurs traces",
+                "Votre destin vous attend près d'un épouvantail solitaire",
+                "Regardez autour des silos à grains imposants",
+                "La clé se cache dans un vieux moulin à vent",
+                "Cherchez là où les abeilles butinent les fleurs sauvages",
+                "Explorez la zone où les fermiers récoltent leurs cultures",
+                "Votre quête vous mène au cœur des terres fertiles"
+            ],
+            "🚜": [
+                "Votre objectif est près des champs cultivés",
+                "Cherchez autour des tracteurs au repos",
+                "La réponse se trouve là où la terre est fraîchement labourée",
+                "Explorez l'endroit où les machines agricoles sont garées",
+                "Votre destin vous attend près des silos à grains",
+                "Regardez autour des granges rouges traditionnelles",
+                "La clé se cache près des systèmes d'irrigation modernes",
+                "Cherchez dans la zone où les fermiers préparent leurs équipements",
+                "Explorez près des champs où les cultures poussent en rangées nettes",
+                "Votre quête vous mène vers le cœur de l'agriculture moderne"
+            ],
+            "🐄": [
+                "Cherchez près de la ferme laitière",
+                "Votre objectif se cache parmi les vaches paisibles",
+                "La réponse se trouve près des pâturages verdoyants",
+                "Explorez l'endroit où le lait frais est collecté",
+                "Votre destin vous attend près des étables bien entretenues",
+                "Regardez autour des clôtures qui délimitent les champs",
+                "La clé se cache près des machines à traire modernes",
+                "Cherchez dans la zone où les veaux gambadent",
+                "Explorez près des silos d'alimentation cylindriques",
+                "Votre quête vous guide vers les producteurs du fromage local"
+            ],
+            "🏫": [
+                "Votre objectif est près du bâtiment principal du campus",
+                "Cherchez autour de la bibliothèque universitaire",
+                "La réponse se trouve dans une salle de cours animée",
+                "Explorez l'endroit où les étudiants se rassemblent entre les cours",
+                "Votre destin vous attend près du laboratoire de recherche",
+                "Regardez autour du terrain de sport de l'université",
+                "La clé se cache dans le bureau d'un professeur renommé",
+                "Cherchez près de la résidence étudiante",
+                "Explorez la zone où les affiches annoncent les événements du campus",
+                "Votre quête vous mène au cœur de la vie estudiantine"
+            ],
+            "📚": [
+                "Cherchez parmi les étagères de livres anciens",
+                "Votre objectif se cache dans la section des ouvrages rares",
+                "La réponse est inscrite dans un grimoire poussiéreux",
+                "Explorez l'endroit où le silence règne en maître",
+                "Votre destin vous attend près du bureau des bibliothécaires",
+                "Regardez autour des tables d'étude",
+                "La clé se trouve dans le catalogue numérique",
+                "Cherchez près des archives historiques",
+                "Explorez la zone des périodiques et des journaux",
+                "Votre quête vous guide vers la source infinie du savoir"
+            ],
+            "🔬": [
+                "Cherchez près du laboratoire de recherche",
+                "Votre objectif se trouve parmi les éprouvettes et les microscopes",
+                "La réponse est cachée dans les données des expériences en cours",
+                "Explorez l'endroit où les scientifiques percent les mystères de l'univers",
+                "Votre destin vous attend près des machines d'analyse sophistiquées",
+                "Regardez autour des tableaux blancs couverts d'équations",
+                "La clé se cache dans l'incubateur de cultures bactériennes",
+                "Cherchez près des ordinateurs qui modélisent des molécules",
+                "Explorez la zone stérile où les combinaisons sont obligatoires",
+                "Votre quête vous mène vers la frontière de la connaissance scientifique"
+            ],
+            "🌋": [
+                "Votre objectif est près du cratère fumant",
+                "Cherchez dans les environs des coulées de lave récentes",
+                "La réponse se trouve là où la terre gronde",
+                "Explorez les formations rocheuses créées par l'éruption",
+                "Votre destin vous attend près des fumerolles sulfureuses",
+                "Regardez autour des instruments de surveillance sismique",
+                "La clé se cache dans une grotte formée par la lave",
+                "Cherchez près des sources chaudes aux couleurs surréalistes",
+                "Explorez la zone où la végétation reprend ses droits sur la cendre",
+                "Votre quête vous guide vers le cœur ardent de la Terre"
+            ],
+            "🔥": [
+                "Votre objectif est près des geysers",
+                "Cherchez autour des jets de vapeur brûlante",
+                "La réponse se trouve là où la terre crache de l'eau bouillante",
+                "Explorez l'endroit où le sol tremble de chaleur",
+                "Votre destin vous attend près des mares aux couleurs surréalistes",
+                "Regardez autour des panneaux avertissant du danger",
+                "La clé se cache dans les dépôts minéraux aux formes étranges",
+                "Cherchez près des sources chaudes où les gens se baignent",
+                "Explorez la zone où les volcanologues prennent leurs mesures",
+                "Votre quête vous guide vers les soupapes de la Terre"
+            ],
+            "🧱": [
+                "L'objectif est près des formations rocheuses volcaniques",
+                "Cherchez parmi les colonnes de basalte hexagonales",
+                "La réponse est gravée dans la pierre née du feu",
+                "Explorez l'endroit où la lave s'est solidifiée en formes fantastiques",
+                "Votre destin vous attend près des cavernes creusées par les coulées",
+                "Regardez autour des falaises striées par les éruptions passées",
+                "La clé se cache dans les bulles figées de la roche volcanique",
+                "Cherchez près des champs de lave refroidie aux formes tourmentées",
+                "Explorez la zone où les géologues étudient l'histoire de la Terre",
+                "Votre quête vous mène vers les témoins solides de la fureur du volcan"
+            ]
+        };
+
+        const EmojiWorldGame = () => {
+            const canvasRef = React.useRef(null);
+            const [gameState, setGameState] = React.useState({
+                playerX: 0,
+                playerY: 0,
+                currentZone: 0,
+                message: 'Bienvenue dans Emoji World ! Utilisez les flèches pour vous déplacer.',
+                showMap: false,
+                coins: 0,
+                celebrating: false,
+                currentMission: null
+            });
+
+            const SCREEN_WIDTH = 800;
+            const SCREEN_HEIGHT = 600;
+            const TILE_SIZE = 50;
+            const GRID_WIDTH = 16;
+            const GRID_HEIGHT = 12;
+
+            const [npcs, setNpcs] = React.useState(() => {
+                const npcList = zones.map((zone, zoneIndex) => 
+                    Array(10).fill().map((_, index) => ({
+                        x: Math.floor(Math.random() * GRID_WIDTH),
+                        y: Math.floor(Math.random() * GRID_HEIGHT),
+                        emoji: index < 3 ? zone.landmarks[index % zone.landmarks.length] : "👤",
+                        isNPC: index >= 3,
+                        name: `NPC${zoneIndex}${index}`,
+                        hint: ""
+                    }))
+                );
+                return npcList;
+            });
+
+            const generateNewMission = React.useCallback(() => {
+                const missionZone = Math.floor(Math.random() * zones.length);
+                const missionNPC = npcs[missionZone].find(npc => npc.isNPC);
+                if (missionNPC) {
+                    missionNPC.isMissionTarget = true;
+                    return { zone: missionZone, npc: missionNPC };
+                }
+                return null;
+            }, [npcs]);
+
+            React.useEffect(() => {
+                if (!gameState.currentMission) {
+                    const newMission = generateNewMission();
+                    setGameState(prev => ({ ...prev, currentMission: newMission }));
+                }
+            }, [gameState.currentMission, generateNewMission]);
+
+            const generateHints = React.useCallback(() => {
+                if (!gameState.currentMission) return;
+
+                const { zone: missionZone, npc: missionNPC } = gameState.currentMission;
+                const nearbyLandmarks = npcs[missionZone].filter(npc => !npc.isNPC && 
+                    Math.abs(npc.x - missionNPC.x) <= 3 && Math.abs(npc.y - missionNPC.y) <= 3);
+
+                const updatedNpcs = npcs.map((zoneNpcs, zoneIndex) => 
+                    zoneNpcs.map(npc => {
+                        if (npc.isNPC && !npc.isMissionTarget) {
+                            if (zoneIndex === missionZone) {
+                                const landmark = nearbyLandmarks[Math.floor(Math.random() * nearbyLandmarks.length)];
+                                const hintList = landmarkHints[landmark?.emoji] || [];
+                                npc.hint = hintList[Math.floor(Math.random() * hintList.length)] || 
+                                           `Il y a quelque chose d'intéressant près de ${landmark?.emoji}`;
+                            } else {
+                                const hintList = zoneHints[zones[missionZone].emoji] || [];
+                                npc.hint = hintList[Math.floor(Math.random() * hintList.length)] || 
+                                           `Votre objectif se trouve dans ${zones[missionZone].name}`;
+                            }
+                        }
+                        return npc;
+                    })
+                );
+                setNpcs(updatedNpcs);
+            }, [gameState.currentMission, npcs]);
+
+            React.useEffect(() => {
+                generateHints();
+            }, [generateHints]);
+
+            const drawGame = React.useCallback(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+
+                ctx.fillStyle = zones[gameState.currentZone].color;
+                ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                for (let x = 0; x <= SCREEN_WIDTH; x += TILE_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, SCREEN_HEIGHT);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= SCREEN_HEIGHT; y += TILE_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(SCREEN_WIDTH, y);
+                    ctx.stroke();
+                }
+
+                ctx.font = '36px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                npcs[gameState.currentZone].forEach(npc => {
+                    ctx.fillText(npc.emoji, npc.x * TILE_SIZE + TILE_SIZE / 2, npc.y * TILE_SIZE + TILE_SIZE / 2);
+                });
+
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(gameState.playerX * TILE_SIZE + 5, gameState.playerY * TILE_SIZE + 5, TILE_SIZE - 10, TILE_SIZE - 10);
+
+                if (gameState.celebrating) {
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
+                    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+                    ctx.font = '48px Arial';
+                    ctx.fillStyle = 'black';
+                    ctx.fillText('🎉 Mission Accomplie ! 🎉', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+                }
+
+                ctx.font = '24px Arial';
+                ctx.fillStyle = 'black';
+                ctx.fillText(`Pièces: ${gameState.coins}`, SCREEN_WIDTH - 80, 30);
+            }, [gameState, npcs]);
+
+            React.useEffect(() => {
+                drawGame();
+            }, [gameState, drawGame]);
+
+            const handleInteraction = (npc) => {
+                if (npc.isMissionTarget) {
+                    const reward = 100;
+                    setGameState(prev => ({ 
+                        ...prev, 
+                        celebrating: true, 
+                        coins: prev.coins + reward,
+                        message: `Mission accomplie ! Vous avez gagné ${reward} pièces !`
+                    }));
+                    setTimeout(() => {
+                        const newMission = generateNewMission();
+                        setGameState(prev => ({ 
+                            ...prev, 
+                            celebrating: false,
+                            currentMission: newMission,
+                            message: newMission ? "Nouvelle mission : " + npcs[newMission.zone].find(n => n.isMissionTarget)?.hint : "Pas de nouvelle mission disponible pour le moment."
+                        }));
+                        generateHints();
+                    }, 3000);
+                } else if (npc.isNPC) {
+                    setGameState(prev => ({ ...prev, message: npc.hint }));
+                } else {
+                    setGameState(prev => ({ ...prev, message: `C'est un ${npc.emoji}. Il n'y a personne à qui parler ici.` }));
+                }
+            };
+
+            const handleKeyDown = React.useCallback((event) => {
+                if (gameState.celebrating) return;
+
+                let newX = gameState.playerX;
+                let newY = gameState.playerY;
+                let newZone = gameState.currentZone;
+                let newMessage = '';
+                let newShowMap = gameState.showMap;
+
+                const moveToNewZone = (direction) => {
+                    const zoneLayout = [
+                        [0, 1, 2],
+                        [3, 4, 5],
+                        [6, 7, 8]
+                    ];
+                    const [currentRow, currentCol] = zoneLayout.reduce((acc, row, rowIndex) => {
+                        const colIndex = row.indexOf(gameState.currentZone);
+                        return colIndex !== -1 ? [rowIndex, colIndex] : acc;
+                    }, [-1, -1]);
+
+                    switch (direction) {
+                        case 'left':
+                            return zoneLayout[currentRow][(currentCol - 1 + 3) % 3];
+                        case 'right':
+                            return zoneLayout[currentRow][(currentCol + 1) % 3];
+                        case 'up':
+                            return zoneLayout[(currentRow - 1 + 3) % 3][currentCol];
+                        case 'down':
+                            return zoneLayout[(currentRow + 1) % 3][currentCol];
+                        default:
+                            return gameState.currentZone;
+                    }
+                };
+
+                switch (event.key) {
+                    case 'ArrowLeft':
+                        if (newX > 0) {
+                            newX--;
+                        } else {
+                            newZone = moveToNewZone('left');
+                            newX = GRID_WIDTH - 1;
+                        }
+                        break;
+                    case 'ArrowRight':
+                        if (newX < GRID_WIDTH - 1) {
+                            newX++;
+                        } else {
+                            newZone = moveToNewZone('right');
+                            newX = 0;
+                        }
+                        break;
+                    case 'ArrowUp':
+                        if (newY > 0) {
+                            newY--;
+                        } else {
+                            newZone = moveToNewZone('up');
+                            newY = GRID_HEIGHT - 1;
+                        }
+                        break;
+                    case 'ArrowDown':
+                        if (newY < GRID_HEIGHT - 1) {
+                            newY++;
+                        } else {
+                            newZone = moveToNewZone('down');
+                            newY = 0;
+                        }
+                        break;
+                    case ' ':
+                        const npc = npcs[gameState.currentZone].find(n => n.x === gameState.playerX && n.y === gameState.playerY);
+                        if (npc) {
+                            handleInteraction(npc);
+                        } else {
+                            newMessage = "Il n'y a rien ici.";
+                        }
+                        break;
+                    case 'm':
+                        newShowMap = !gameState.showMap;
+                        break;
+                    default:
+                        return;
+                }
+
+                if (newZone !== gameState.currentZone) {
+                    newMessage = `Vous entrez dans ${zones[newZone].name} ${zones[newZone].emoji}`;
+                }
+
+                setGameState(prevState => ({
+                    ...prevState,
+                    playerX: newX,
+                    playerY: newY,
+                    currentZone: newZone,
+                    message: newMessage || prevState.message,
+                    showMap: newShowMap
+                }));
+            }, [gameState, npcs, handleInteraction]);
+
+            React.useEffect(() => {
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [handleKeyDown]);
+
+            const WorldMap = () => {
+                const zoneLayout = [
+                    [0, 1, 2],
+                    [3, 4, 5],
+                    [6, 7, 8]
+                ];
+
+                return (
+                    <div className="modal" onClick={() => setGameState(prev => ({ ...prev, showMap: false }))}>
+                        <div className="modal-content" onClick={e => e.stopPropagation()}>
+                            <button className="close-button" onClick={() => setGameState(prev => ({ ...prev, showMap: false }))}>
+                                &times;
+                            </button>
+                            <h2>Carte du Monde</h2>
+                            <div className="map-grid">
+                                {zoneLayout.map((row, rowIndex) => 
+                                    row.map((zoneIndex, colIndex) => (
+                                        <div key={`${rowIndex}-${colIndex}`} className="map-cell" style={{ 
+                                            backgroundColor: zones[zoneIndex].color, 
+                                            border: zoneIndex === gameState.currentZone ? '3px solid yellow' : 'none',
+                                            color: zones[zoneIndex].color === "#FFFFFF" ? "black" : "white"
+                                        }}>
+                                            <div className="map-emoji">{zones[zoneIndex].emoji}</div>
+                                            <div className="map-name">{zones[zoneIndex].name}</div>
+                                            {zoneIndex === gameState.currentZone && <div className="map-player">👤</div>}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <div style={{ marginTop: '10px', fontSize: '14px' }}>
+                                Votre position actuelle est indiquée par 👤.
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <canvas ref={canvasRef} width={SCREEN_WIDTH} height={SCREEN_HEIGHT} tabIndex="0" />
+        <div style={{ marginTop: '10px', height: '50px', maxWidth: '600px' }}>{gameState.message}</div>
+        <div style={{ marginTop: '10px' }}>
+            <p>Flèches : Se déplacer | Espace : Interagir | M : Afficher/Masquer la carte</p>
+        </div>
+        {gameState.showMap && <WorldMap />}
+    </div>
+);
+        };
+
+        ReactDOM.render(<EmojiWorldGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>
